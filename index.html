@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>魔法天赋测验</title>
     <style>
-        /* CSS 样式部分 - 增加了加载页和结果页的动画效果 */
+        /* CSS 样式部分 */
         body, html {
             margin: 0;
             padding: 0;
@@ -23,11 +23,53 @@
             left: 0;
             width: 100%;
             height: 100%;
+            /* 请确保 bg.jpg 存在 */
             background-image: url('bg.jpg'); 
             background-size: 100% 100%; 
             background-repeat: no-repeat;
             z-index: -1;
         }
+
+        /* --- 新增：音乐控制按钮样式 --- */
+        #music-control {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(78, 52, 46, 0.8);
+            border: 2px solid #fff8e1;
+            border-radius: 50%;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 248, 225, 0.3);
+            transition: transform 0.3s;
+        }
+
+        #music-icon {
+            font-size: 20px;
+            color: #fff8e1;
+            /* 默认不旋转，播放时添加旋转类 */
+        }
+
+        /* 音乐播放时的旋转动画 */
+        .music-playing {
+            animation: rotateDisk 4s linear infinite;
+        }
+
+        @keyframes rotateDisk {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 音乐关闭时的斜线样式（可选） */
+        .music-off {
+            opacity: 0.6;
+        }
+        /* --------------------------- */
 
         .container {
             position: relative;
@@ -130,7 +172,6 @@
             overflow-y: auto; 
         }
         
-        /* 结果页动画元素的基础样式 */
         .reveal-item {
             opacity: 0;
             transform: translateY(20px);
@@ -144,7 +185,7 @@
             margin: 15px 0;
             display: block;
             text-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            transition-delay: 0.2s; /* 标题延迟出现 */
+            transition-delay: 0.2s; 
         }
 
         .divider {
@@ -170,13 +211,11 @@
             transition-delay: 1.4s;
         }
 
-        /* 当元素被添加 .revealed 类时，触发动画 */
         .revealed {
             opacity: 1;
             transform: translateY(0);
         }
 
-        /* 新增：计算中页面样式 */
         #loading-page {
             justify-content: center;
         }
@@ -204,6 +243,15 @@
 
     <div class="bg"></div>
 
+    <!-- --- 新增：音频标签和控制按钮 --- -->
+    <!-- 请将 src 改为你实际的音乐文件路径，例如 'music.mp3' -->
+    <audio id="bgm" src="bgm.mp3" loop preload="auto"></audio>
+    
+    <div id="music-control" onclick="toggleBGM()">
+        <div id="music-icon" class="music-off">🎵</div>
+    </div>
+    <!-- -------------------------------- -->
+
     <div class="container">
         
         <!-- 1. 导言页 -->
@@ -222,7 +270,7 @@
             <div id="options-box"></div>
         </div>
 
-        <!-- 新增：3. 加载页 -->
+        <!-- 3. 加载页 -->
         <div id="loading-page" class="page">
             <div class="calculating-text">正在解析你的魔法天赋...</div>
         </div>
@@ -301,6 +349,37 @@
         let currentQuestionIndex = 0;
         let userChoices = [];
 
+        // --- 新增：音乐控制逻辑 ---
+        const bgm = document.getElementById('bgm');
+        const musicIcon = document.getElementById('music-icon');
+        let isMusicPlaying = false;
+
+        function toggleBGM() {
+            if (bgm.paused) {
+                playMusic();
+            } else {
+                pauseMusic();
+            }
+        }
+
+        function playMusic() {
+            bgm.play().then(() => {
+                isMusicPlaying = true;
+                musicIcon.classList.remove('music-off');
+                musicIcon.classList.add('music-playing');
+            }).catch(error => {
+                console.log("播放失败，可能是交互策略限制:", error);
+            });
+        }
+
+        function pauseMusic() {
+            bgm.pause();
+            isMusicPlaying = false;
+            musicIcon.classList.add('music-off');
+            musicIcon.classList.remove('music-playing');
+        }
+        // ------------------------
+
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(el => el.style.display = 'none');
             const target = document.getElementById(pageId);
@@ -312,9 +391,14 @@
         }
 
         function startQuiz() {
+            // --- 修改：点击开始时，如果音乐没播放，尝试播放 ---
+            if (bgm.paused) {
+                playMusic();
+            }
+            // ---------------------------------------------
+            
             currentQuestionIndex = 0;
             userChoices = [];
-            // 重置结果页动画，以便再次测验时动画能重新播放
             document.querySelectorAll('#result-page .reveal-item').forEach(item => {
                 item.classList.remove('revealed');
             });
@@ -337,12 +421,10 @@
                 
                 btn.onclick = function() {
                     this.classList.add('option-active');
-                    
                     setTimeout(() => {
                         selectOption(opt.value);
                     }, 400); 
                 };
-                
                 optionsBox.appendChild(btn);
             });
         }
@@ -358,18 +440,14 @@
                 quizPage.offsetHeight;
                 quizPage.style.animation = 'fadeIn 0.6s ease';
             } else {
-                // **核心修改：调用新的结果揭晓函数**
                 revealResultWithSuspense();
             }
         }
 
         function revealResultWithSuspense() {
-            // 1. 显示“正在计算”页面
             showPage('loading-page');
 
-            // 2. 等待2.5秒，模拟计算过程，营造悬念
             setTimeout(() => {
-                // 3. 计算最终结果
                 const key = userChoices.slice(0, 4).join(''); 
                 let resultKey = "博学"; 
 
@@ -383,25 +461,20 @@
                 if (logicMap[key]) resultKey = logicMap[key];
                 const res = resultDescriptions[resultKey];
 
-                // 4. 填充结果内容（此时页面还未显示）
                 document.getElementById('result-title').innerText = res.title;
                 document.getElementById('result-desc').innerText = res.desc;
                 
-                // 5. 切换到结果页
                 showPage('result-page');
 
-                // 6. 逐个为结果页元素添加 .revealed 类，触发CSS动画
                 const revealItems = document.querySelectorAll('#result-page .reveal-item');
                 revealItems.forEach((item, index) => {
-                    // 使用元素的 transition-delay 来控制出现顺序，无需复杂的 setTimeout 链
                     setTimeout(() => {
                         item.classList.add('revealed');
-                    }, 100 * index); // 每个元素间隔很短的时间触发，主要靠CSS的delay来控制
+                    }, 100 * index); 
                 });
 
-            }, 2500); // 总的计算等待时间
+            }, 2500); 
         }
     </script>
 </body>
 </html>
-
