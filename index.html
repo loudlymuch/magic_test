@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>魔法天赋测验</title>
+    <style>
+        /* CSS 样式部分 - 复刻你的小程序风格 */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: "Songti SC", "SimSun", "Times New Roman", serif;
+            color: #4e342e;
+            overflow: hidden;
+        }
+
+        /* 背景图 */
+        .bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('bg.jpg'); /* 确保你的图片叫 bg.jpg */
+            background-size: 100% 100%; /* 强制拉伸填满 */
+            background-repeat: no-repeat;
+            z-index: -1;
+        }
+
+        /* 容器 */
+        .container {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            padding: 20% 10%; /* 给边框留白 */
+        }
+
+        /* 隐藏所有页面，通过JS控制显示 */
+        .page {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 0.8s ease;
+        }
+
+        /* 默认显示第一页 */
+        #intro-page { display: flex; justify-content: center; }
+
+        /* 文字样式 */
+        .title {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #3e2723;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .text-line {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #5d4037;
+            text-align: center;
+        }
+
+        /* 按钮样式 */
+        .magic-btn {
+            background: #4e342e;
+            color: #fff8e1;
+            border: 2px solid #3e2723;
+            border-radius: 25px;
+            padding: 10px 40px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 40px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(62, 39, 35, 0.4);
+        }
+        .magic-btn:active { transform: translateY(2px); }
+
+        /* 题目页 */
+        .question-header {
+            font-size: 0.9rem;
+            color: #8d6e63;
+            border-bottom: 1px solid #8d6e63;
+            padding-bottom: 5px;
+            margin-bottom: 20px;
+            margin-top: 20px;
+        }
+
+        .question-text {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #3e2723;
+            margin-bottom: 30px;
+            line-height: 1.4;
+            text-align: left;
+            width: 100%;
+        }
+
+        .option-btn {
+            background: rgba(255, 255, 255, 0.6);
+            border: 2px solid #6d4c41;
+            color: #3e2723;
+            width: 100%;
+            margin-bottom: 15px;
+            font-size: 1rem;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: left;
+            cursor: pointer;
+            line-height: 1.4;
+        }
+
+        /* 结果页 */
+        .result-content {
+            text-align: center;
+            padding-top: 20px;
+            width: 100%;
+            overflow-y: auto; /* 允许滚动 */
+        }
+        
+        .result-name {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #b71c1c;
+            margin: 10px 0;
+            display: block;
+        }
+
+        .divider {
+            width: 50%;
+            height: 2px;
+            background-color: #3e2723;
+            margin: 10px auto 20px auto;
+        }
+
+        .outro-text {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-top: 20px;
+        }
+
+        /* 垫片，防止挡住右下角插画 */
+        .spacer { height: 150px; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg"></div>
+
+    <div class="container">
+        
+        <!-- 1. 导言页 -->
+        <div id="intro-page" class="page">
+            <div class="title">欢迎你，朋友！</div>
+            <div class="text-line">魔法的帷幕已为你拉开，</div>
+            <div class="text-line">完成你的入学测验，</div>
+            <div class="text-line">揭开你命中注定的天赋魔法。</div>
+            <button class="magic-btn" onclick="startQuiz()">开启测验</button>
+        </div>
+
+        <!-- 2. 答题页 -->
+        <div id="quiz-page" class="page">
+            <div id="q-count" class="question-header">第 1 题 / 共 5 题</div>
+            <div id="q-text" class="question-text">题目加载中...</div>
+            <div id="options-box">
+                <!-- 选项会通过JS插入这里 -->
+            </div>
+        </div>
+
+        <!-- 3. 结果页 -->
+        <div id="result-page" class="page">
+            <div class="result-content">
+                <div style="font-size: 0.9rem; color: #8d6e63;">✨ 测验完成 ✨</div>
+                <div style="font-size: 1rem; margin-top:10px;">你的天赋是</div>
+                <div id="result-title" class="result-name">博学</div>
+                
+                <div class="divider"></div>
+                <div id="result-desc" class="text-line" style="text-align: justify; padding: 0 10px;">
+                    描述文案...
+                </div>
+                
+                <div class="outro-text">
+                    <div>契约已成，你的魔法之路正式启程！</div>
+                    <div>无论你归属何方学院，</div>
+                    <div>探索，巧思，博学与创新</div>
+                    <div>都将是你最强大的咒语。</div>
+                    <div style="font-weight: bold; margin-top:10px; color:#3e2723">“最伟大的魔法，是相信自己。”</div>
+                </div>
+
+                <button class="magic-btn" onclick="location.reload()" style="margin-bottom: 20px;">再次测验</button>
+                <div class="spacer"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- 逻辑与题目配置 ---
+        const questions = [
+            {
+                question: "1、踏入未知的魔法领域，你会如何开启探索之旅？",
+                options: [
+                    { text: "A. 绘制魔法知识星图，搭建完整的咒语与符文体系", value: "A" },
+                    { text: "B. 挣脱古老魔法典籍的束缚，用跨界视角唤醒沉睡的神秘力量", value: "B" }
+                ]
+            },
+            {
+                question: "2、遭遇棘手的魔法难题时，你的破局之道是？",
+                options: [
+                    { text: "A. 拆解魔法能量的流转脉络，推演最精准的施法方案", value: "A" },
+                    { text: "B. 挥动魔法杖大胆尝试，在实践中捕捉灵光一闪的突破契机", value: "B" }
+                ]
+            },
+            {
+                question: "3、研习全新魔法技能时，你更专注于？",
+                options: [
+                    { text: "A. 洞悉魔法的本源原理与古老传承背景", value: "A" },
+                    { text: "B. 探寻咒语、法器与场景的多元适配逻辑", value: "B" }
+                ]
+            },
+            {
+                question: "4、面对流传已久的传统魔法，你更渴望？",
+                options: [
+                    { text: "A. 挖掘其隐藏的延伸法术，解锁更多未知用法", value: "A" },
+                    { text: "B. 融合自身魔力特质，创造颠覆传统的全新魔法范式", value: "B" }
+                ]
+            },
+            {
+                question: "5、闲暇时探秘魔法新事物，你会选择？",
+                options: [
+                    { text: "A. 搜集各地魔法卷轴与古籍，全面洞悉其奥秘", value: "A" },
+                    { text: "B. 沉浸式催动魔力亲身尝试，在实践中发现意外惊喜", value: "B" }
+                ]
+            }
+        ];
+
+        const resultDescriptions = {
+            "博学": { title: "博学", desc: "你拥有深邃的智慧，如同古老的图书馆，包罗万象，洞悉真理。" },
+            "探索": { title: "探索", desc: "你拥有无尽的好奇心，世界的边界在你脚下不断延伸，未知是你最好的朋友。" },
+            "巧思": { title: "巧思", desc: "你的思维灵动而敏捷，总能在困局中找到意想不到的捷径，化腐朽为神奇。" },
+            "创新": { title: "创新", desc: "你是规则的打破者，旧有的范式无法束缚你，你将定义新的魔法纪元。" }
+        };
+
+        // 状态变量
+        let currentQuestionIndex = 0;
+        let userChoices = [];
+
+        // 切换页面函数
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(el => el.style.display = 'none');
+            document.getElementById(pageId).style.display = 'flex';
+        }
+
+        // 开始测验
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            userChoices = [];
+            showPage('quiz-page');
+            renderQuestion();
+        }
+
+        // 渲染题目
+        function renderQuestion() {
+            const q = questions[currentQuestionIndex];
+            document.getElementById('q-count').innerText = `第 ${currentQuestionIndex + 1} 题 / 共 ${questions.length} 题`;
+            document.getElementById('q-text').innerText = q.question;
+            
+            const optionsBox = document.getElementById('options-box');
+            optionsBox.innerHTML = ''; // 清空选项
+
+            q.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt.text;
+                btn.onclick = () => selectOption(opt.value);
+                optionsBox.appendChild(btn);
+            });
+        }
+
+        // 选择选项
+        function selectOption(value) {
+            userChoices.push(value);
+
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                renderQuestion();
+            } else {
+                calculateResult();
+            }
+        }
+
+        // 计算结果
+        function calculateResult() {
+            const key = userChoices.slice(0, 4).join(''); 
+            let resultKey = "博学"; // 默认
+
+            // 你的 Excel 逻辑表
+            const logicMap = {
+                "AAAA": "博学", "AAAB": "博学", "AABA": "博学", "AABB": "博学",
+                "ABAA": "博学", "ABAB": "探索", "ABBA": "巧思", "ABBB": "巧思",
+                "BAAA": "博学", "BAAB": "探索", "BABA": "博学", "BABB": "巧思",
+                "BBAA": "创新", "BBAB": "探索", "BBBA": "巧思", "BBBB": "创新"
+            };
+
+            if (logicMap[key]) resultKey = logicMap[key];
+            const res = resultDescriptions[resultKey];
+
+            document.getElementById('result-title').innerText = res.title;
+            document.getElementById('result-desc').innerText = res.desc;
+            
+            showPage('result-page');
+        }
+    </script>
+</body>
+</html>
